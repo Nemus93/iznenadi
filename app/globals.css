@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-serif: var(--font-playfair);
+}
+
+html,
+body {
+  min-height: 100%;
+  background: #000;
+  color: #fff;
+}

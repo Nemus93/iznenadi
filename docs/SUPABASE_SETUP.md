@@ -15,6 +15,8 @@ Pokreni **redom** (kopiraj ceo fajl):
 | 2 | `supabase/migrations/20260615170000_add_tier.sql` |
 | 3 | `supabase/migrations/20260616180000_add_payment.sql` |
 
+Ako init/tier su već pokrenuti, vidi [MIGRATE_PAYMENT.md](MIGRATE_PAYMENT.md) (samo payment kolone).
+
 ## 3. Provera
 
 U Table Editor:

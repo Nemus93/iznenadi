@@ -50,13 +50,36 @@ async function runSqlViaManagementApi(accessToken, projectRef, sql) {
 
 async function runSqlViaPg(dbUrl, sql) {
   const { default: pg } = await import('pg')
-  const client = new pg.Client({ connectionString: dbUrl })
+  const client = new pg.Client({ connectionString: dbUrl, ssl: { rejectUnauthorized: false } })
   await client.connect()
   try {
     await client.query(sql)
   } finally {
     await client.end()
   }
+}
+
+function buildDbUrls(projectRef, password) {
+  const enc = encodeURIComponent(password)
+  return [
+    `postgresql://postgres.${projectRef}:${enc}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`,
+    `postgresql://postgres.${projectRef}:${enc}@aws-0-eu-west-1.pooler.supabase.com:6543/postgres`,
+    `postgresql://postgres:${enc}@db.${projectRef}.supabase.co:5432/postgres`,
+  ]
+}
+
+async function runSqlWithPassword(projectRef, password, sql) {
+  const urls = buildDbUrls(projectRef, password)
+  let lastErr
+  for (const dbUrl of urls) {
+    try {
+      await runSqlViaPg(dbUrl, sql)
+      return
+    } catch (e) {
+      lastErr = e
+    }
+  }
+  throw lastErr
 }
 
 async function main() {
@@ -113,15 +136,10 @@ async function main() {
     return
   }
 
-  const dbUrl =
-    env.SUPABASE_DB_URL ||
-    (env.SUPABASE_DB_PASSWORD && projectRef
-      ? `postgresql://postgres.${projectRef}:${encodeURIComponent(env.SUPABASE_DB_PASSWORD)}@aws-0-eu-central-1.pooler.supabase.com:6543/postgres`
-      : null)
-
+  const dbPassword = env.SUPABASE_DB_PASSWORD
   const accessToken = env.SUPABASE_ACCESS_TOKEN
 
-  if (!dbUrl && !accessToken) {
+  if (!env.SUPABASE_DB_URL && !dbPassword && !accessToken) {
     console.error('\nDodaj u .env.local jedno od:')
     console.error('  SUPABASE_DB_PASSWORD=... (database password iz Supabase dashboard)')
     console.error('  SUPABASE_DB_URL=postgresql://... (puni connection string)')
@@ -132,8 +150,10 @@ async function main() {
   for (const file of files) {
     const sql = readFileSync(join(migrationsDir, file), 'utf8')
     console.log(`Running ${file}...`)
-    if (dbUrl) {
-      await runSqlViaPg(dbUrl, sql)
+    if (env.SUPABASE_DB_URL) {
+      await runSqlViaPg(env.SUPABASE_DB_URL, sql)
+    } else if (dbPassword && projectRef) {
+      await runSqlWithPassword(projectRef, dbPassword, sql)
     } else if (accessToken && projectRef) {
       await runSqlViaManagementApi(accessToken, projectRef, sql)
     }

@@ -2,9 +2,11 @@
 
 Init + tier su već primenjeni. Fali samo `payment_status` kolona.
 
+> **Novi Iznenadi projekat:** pokreni sve 3 migracije redom iz [SUPABASE_SETUP.md](SUPABASE_SETUP.md) — payment je u trećem fajlu.
+
 ## Opcija A — SQL Editor (najbrže, bez lozinke u .env)
 
-1. Otvori [Supabase Dashboard](https://supabase.com/dashboard/project/tozyxkxmsyhyeznehjtx/sql/new)
+1. Otvori Supabase Dashboard → **tvoj Iznenadi projekat** → **SQL Editor**
 2. Zalepi sadržaj fajla `supabase/migrations/20260616180000_add_payment.sql`
 3. Klik **Run**
 

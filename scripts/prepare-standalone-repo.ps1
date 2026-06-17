@@ -12,16 +12,31 @@ Write-Host "Source: $Source"
 Write-Host "Destination: $Destination"
 
 if (Test-Path $Destination) {
-  Write-Host "Brisanje postojećeg $Destination ..."
-  Remove-Item -Recurse -Force $Destination
+  Write-Host "Ažuriram $Destination (zadržavam .git) ..."
+  Get-ChildItem -Path $Destination -Force | Where-Object { $_.Name -ne '.git' } | ForEach-Object {
+    Remove-Item -Path $_.FullName -Recurse -Force
+  }
+} else {
+  New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 }
-
-New-Item -ItemType Directory -Force -Path $Destination | Out-Null
 
 Get-ChildItem -Path $Source -Force | Where-Object {
   $_.Name -notin $Exclude
 } | ForEach-Object {
   Copy-Item -Path $_.FullName -Destination $Destination -Recurse -Force
+}
+
+# Zadrži git remote ako postoji standalone repo
+$gitDir = Join-Path $Destination ".git"
+if (-not (Test-Path $gitDir)) {
+  Push-Location $Destination
+  try {
+    git init -q
+    git branch -M main
+    git remote add origin https://github.com/Nemus93/iznenadi.git 2>$null
+  } finally {
+    Pop-Location
+  }
 }
 
 Write-Host "Gotovo. Sledeći koraci:"

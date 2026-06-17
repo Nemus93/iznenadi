@@ -3,7 +3,15 @@
 ## Preduslov
 
 - GitHub repo (poseban za Iznenadi — vidi `scripts/prepare-standalone-repo.ps1`)
-- Supabase prod podešen ([SUPABASE_SETUP.md](SUPABASE_SETUP.md))
+- Supabase prod podešen ([SUPABASE_SETUP.md](SUPABASE_SETUP.md)) — **poseban projekat**, ne NAIS Studio
+- Sigurnost: [SECURITY.md](SECURITY.md)
+
+## Brzi sync (posle izmena u monorepo)
+
+```powershell
+cd iznenadi/web
+.\scripts\sync-to-github.ps1 -Message "docs: opis izmene"
+```
 
 ## Koraci
 
@@ -25,9 +33,22 @@ git push -u origin main
 
 ### 2. Vercel import
 
-1. [vercel.com/new](https://vercel.com/new) → Import Git Repository
+**Dashboard (preporučeno):**
+
+1. [vercel.com/new](https://vercel.com/new) → Import Git Repository → `Nemus93/iznenadi`
 2. Root Directory: **/** (repo root)
 3. Framework: Next.js (auto)
+
+**CLI (alternativa):**
+
+```bash
+cd iznenadi-app
+npx vercel@latest login
+npx vercel@latest link
+npx vercel@latest env pull .env.vercel.local
+# Postavi env vars u Vercel dashboard, pa:
+npx vercel@latest --prod
+```
 
 ### 3. Environment variables
 

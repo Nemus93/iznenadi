@@ -1,9 +1,30 @@
 # Supabase produkcija — Iznenadi
 
+Iznenadi koristi **poseban Supabase projekat**, odvojen od NAIS Studio (`tozyxkxmsyhyeznehjtx`). Nikad ne deli service role key sa Studio app-om.
+
 ## 1. Novi projekat
+
+### Ručno (dashboard)
 
 1. [supabase.com](https://supabase.com) → New project (region blizu korisnika, npr. EU).
 2. Sačuvaj lozinku baze.
+
+### Automatski (preporučeno)
+
+1. [Account → Access Tokens](https://supabase.com/dashboard/account/tokens) → Generate → dodaj u `.env.local`:
+
+```
+SUPABASE_ACCESS_TOKEN=sbp_...
+```
+
+2. Pokreni:
+
+```bash
+cd iznenadi/web
+node scripts/provision-iznenadi.mjs
+```
+
+Skripta kreira projekat `iznenadi`, primenjuje sve migracije i ažurira `.env.local`.
 
 ## 2. Migracije (SQL Editor)
 

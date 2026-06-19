@@ -1,6 +1,8 @@
 # Smoke test — produkcija
 
-Odmah posle Vercel deploya. Zameni `BASE` sa tvojim URL-om.
+Odmah posle Vercel deploya.
+
+**Produkcija (jun 2026):** `BASE` = `https://web-beta-umber-59.vercel.app`
 
 ## Statične rute
 

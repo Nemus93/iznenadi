@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "migrate": "node scripts/migrate.mjs",
-    "provision": "node scripts/provision-iznenadi.mjs"
+    "provision": "node scripts/provision-iznenadi.mjs",
+    "deploy": "node scripts/deploy-vercel.mjs",
+    "smoke": "node scripts/smoke-test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",

@@ -94,6 +94,19 @@ export default function TemplatesPage() {
           </article>
         ))}
       </div>
+
+      <article className="mt-8 rounded-3xl border border-dashed border-pink-500/40 bg-pink-500/5 p-8 text-center">
+        <h2 className="font-serif text-2xl font-bold text-white">Nešto posebno?</h2>
+        <p className="mx-auto mt-3 max-w-md text-zinc-400">
+          Nemaš u ponudi ono što zamišljaš? Opiši ideju — procenićemo cenu i rok posebno za tebe.
+        </p>
+        <Link
+          href="/create/custom"
+          className="mt-6 inline-block rounded-full border border-pink-500/50 px-8 py-3 text-sm font-medium text-pink-300 transition hover:bg-pink-500/10"
+        >
+          Pošalji custom zahtev
+        </Link>
+      </article>
     </main>
   )
 }

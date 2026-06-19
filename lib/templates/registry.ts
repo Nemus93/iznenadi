@@ -1,6 +1,6 @@
 import type { Tier } from '@/lib/types/surprise'
 
-export type TemplateId = 'love_message' | 'secret_quiz' | 'unlock_phone'
+export type TemplateId = 'love_message' | 'secret_quiz' | 'unlock_phone' | 'countdown'
 
 export interface TemplateTierOption {
   tier: Tier
@@ -75,7 +75,7 @@ export const TEMPLATES: TemplateDefinition[] = [
     id: 'unlock_phone',
     name: 'Otključaj telefon',
     description:
-      'Zaključan telefon sa notifikacijama — svaka otkriva deo priče do glavne poruke.',
+      'Prave SMS poruke na telefon + zaključan ekran sa notifikacijama — misteriozno iznenađenje pre otvaranja linka.',
     emoji: '📱',
     demoPath: '/demo/phone',
     available: true,
@@ -84,7 +84,34 @@ export const TEMPLATES: TemplateDefinition[] = [
         tier: 'premium',
         label: TIER_LABELS.premium,
         priceLabel: 'Besplatno (beta)',
-        features: ['Lock screen animacija', 'Notifikacije jedna po jedna', 'Dramatičan finale'],
+        features: [
+          'Prave SMS notifikacije na telefon',
+          'Lock screen animacija',
+          'Notifikacije jedna po jedna',
+          'Dramatičan finale',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'countdown',
+    name: 'Odbrojavanje',
+    description:
+      'Dramatično odbrojavanje do posebnog datuma — pa emotivna poruka kad vreme istekne.',
+    emoji: '⏳',
+    demoPath: '/demo/countdown',
+    available: true,
+    tiers: [
+      {
+        tier: 'standard',
+        label: TIER_LABELS.standard,
+        priceLabel: 'Besplatno (beta)',
+        features: [
+          'Živo odbrojavanje do datuma',
+          'Teaser poruka pre otkrivanja',
+          'Opcione slike i finale',
+          'Custom boje',
+        ],
       },
     ],
   },

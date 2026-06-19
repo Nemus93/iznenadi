@@ -16,6 +16,7 @@ import type { Theme } from '@/lib/types/surprise'
 import { TIER_LABELS, tierSupportsCustomColors } from '@/lib/templates/registry'
 import { STANDARD_THEMES, THEME_LABELS, THEME_PRESETS } from '@/lib/themes/presets'
 import { handleCreateSurpriseResult } from '@/lib/handle-create-result'
+import WizardThemeStep from '@/components/create/WizardThemeStep'
 import { createSurpriseAction } from './actions'
 import {
   compressImage,
@@ -23,7 +24,7 @@ import {
   MAX_TOTAL_UPLOAD_BYTES,
 } from '@/lib/compress-image'
 
-const STEPS = ['Ko', 'Notifikacije', 'Slike', 'Poruka', 'Izgled', 'Pregled'] as const
+const STEPS = ['Ko', 'Telefon', 'Notifikacije', 'Slike', 'Poruka', 'Izgled', 'Pregled'] as const
 const MAX_PHOTOS = 5
 
 const OCCASION_PRESETS = [
@@ -74,6 +75,15 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
       if (!valid) return
     }
     if (step === 1) {
+      const valid = await form.trigger([
+        'smsEnabled',
+        'recipientPhone',
+        'smsConsent',
+        'smsStartAt',
+      ])
+      if (!valid) return
+    }
+    if (step === 2) {
       const valid = await form.trigger(
         fields.flatMap((_, i) => [
           `notifications.${i}.title` as const,
@@ -82,15 +92,15 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
       )
       if (!valid) return
     }
-    if (step === 2 && photos.length === 0) {
+    if (step === 3 && photos.length === 0) {
       setSubmitError('Dodaj bar jednu sliku.')
       return
     }
-    if (step === 3) {
+    if (step === 4) {
       const valid = await form.trigger(['mainMessage', 'finaleText'])
       if (!valid) return
     }
-    if (step === 4) {
+    if (step === 5) {
       const valid = await form.trigger(['themeMode', 'theme', 'customColors'])
       if (!valid) return
     }
@@ -225,6 +235,63 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
           {step === 1 && (
             <div className="space-y-5">
               <p className="text-sm text-zinc-400">
+                Primalac dobija prave SMS poruke na telefon pre nego što otvori link — kao
+                misteriozne notifikacije.
+              </p>
+              <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+                <input
+                  type="checkbox"
+                  checked={values.smsEnabled}
+                  onChange={(e) => form.setValue('smsEnabled', e.target.checked)}
+                  className="h-4 w-4 rounded border-zinc-600"
+                />
+                <span className="text-sm text-white">Pošalji SMS notifikacije na telefon</span>
+              </label>
+              {values.smsEnabled && (
+                <>
+                  <Field
+                    label="Broj telefona primaoca"
+                    error={form.formState.errors.recipientPhone?.message}
+                  >
+                    <input
+                      {...form.register('recipientPhone')}
+                      placeholder="npr. 061 1234567"
+                      inputMode="tel"
+                      className={inputClass}
+                    />
+                  </Field>
+                  <Field
+                    label="Kada poslati (opciono)"
+                    error={form.formState.errors.smsStartAt?.message}
+                  >
+                    <input
+                      type="datetime-local"
+                      value={values.smsStartAt ?? ''}
+                      onChange={(e) => form.setValue('smsStartAt', e.target.value)}
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-xs text-zinc-500">Prazno = odmah posle objave</p>
+                  </Field>
+                  <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
+                    <input
+                      type="checkbox"
+                      checked={values.smsConsent}
+                      onChange={(e) => form.setValue('smsConsent', e.target.checked)}
+                      className="mt-1 h-4 w-4 rounded border-zinc-600"
+                    />
+                    <span className="text-sm text-zinc-300">
+                      Potvrđujem da imam dozvolu da pošaljem poruke na ovaj broj i da primalac
+                      zna da ih šaljem.
+                    </span>
+                  </label>
+                </>
+              )}
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-5">
+              <p className="text-sm text-zinc-400">
                 Postavi 3–5 notifikacija. Primalac otvara jednu po jednu na zaključanom telefonu.
                 Posledna može biti hint za otključavanje.
               </p>
@@ -282,7 +349,7 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
             </div>
           )}
 
-          {step === 2 && (
+          {step === 3 && (
             <div className="space-y-4">
               <p className="text-sm text-zinc-400">
                 Dodaj 1–{MAX_PHOTOS} slika (max 5 MB). Opciono poveži sliku sa notifikacijom.
@@ -330,7 +397,7 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
             </div>
           )}
 
-          {step === 3 && (
+          {step === 4 && (
             <div className="space-y-4">
               <Field label="Poruka posle otključavanja" error={form.formState.errors.mainMessage?.message}>
                 <textarea
@@ -350,91 +417,29 @@ export default function PhoneWizard({ templateName }: PhoneWizardProps) {
             </div>
           )}
 
-          {step === 4 && (
-            <div className="space-y-5">
-              {allowCustomColors && (
-                <div className="flex gap-2 rounded-xl border border-zinc-800 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue('themeMode', 'preset')
-                      form.setValue('customColors', undefined)
-                    }}
-                    className={`flex-1 rounded-lg py-2 text-sm transition ${
-                      values.themeMode === 'preset' ? 'bg-pink-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Preset boje
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue('themeMode', 'custom')
-                      form.setValue('customColors', DEFAULT_CUSTOM_COLORS)
-                    }}
-                    className={`flex-1 rounded-lg py-2 text-sm transition ${
-                      values.themeMode === 'custom' ? 'bg-pink-500 text-white' : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Tvoja kombinacija
-                  </button>
-                </div>
-              )}
-              {values.themeMode === 'preset' && (
-                <div className="grid grid-cols-3 gap-3">
-                  {STANDARD_THEMES.map((theme) => (
-                    <ThemePresetCard
-                      key={theme}
-                      theme={theme}
-                      selected={values.theme === theme}
-                      onSelect={() => form.setValue('theme', theme)}
-                    />
-                  ))}
-                </div>
-              )}
-              {values.themeMode === 'custom' && (
-                <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-                  <ColorPickerField
-                    label="Primarna"
-                    value={values.customColors?.primary ?? DEFAULT_CUSTOM_COLORS.primary}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        primary: v,
-                      })
-                    }
-                  />
-                  <ColorPickerField
-                    label="Akcent"
-                    value={values.customColors?.accent ?? DEFAULT_CUSTOM_COLORS.accent}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        accent: v,
-                      })
-                    }
-                  />
-                  <ColorPickerField
-                    label="Pozadina"
-                    value={values.customColors?.background ?? DEFAULT_CUSTOM_COLORS.background}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        background: v,
-                      })
-                    }
-                  />
-                </div>
-              )}
-            </div>
+          {step === 5 && (
+            <WizardThemeStep
+              form={form}
+              values={values}
+              allowCustomColors={allowCustomColors}
+              defaultCustomColors={DEFAULT_CUSTOM_COLORS}
+            />
           )}
 
-          {step === 5 && (
+          {step === 6 && (
             <div className="space-y-4">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 text-sm">
                 <Row label="Template" value={templateName} />
                 <Row label="Nivo" value={TIER_LABELS.premium} />
                 <Row label="Primalac" value={values.recipientName} />
+                <Row
+                  label="SMS"
+                  value={
+                    values.smsEnabled
+                      ? values.recipientPhone || '—'
+                      : 'Samo link (bez SMS)'
+                  }
+                />
                 <Row
                   label="Notifikacije"
                   value={`${values.notifications.filter((n) => n.title).length} uneto`}

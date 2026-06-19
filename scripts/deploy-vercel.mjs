@@ -60,7 +60,14 @@ async function upsertEnv(token, projectId, teamId, key, value, target = ['produc
     body: JSON.stringify({
       key,
       value,
-      type: key.includes('SERVICE_ROLE') || key.includes('SECRET') ? 'encrypted' : 'plain',
+      type:
+        key.includes('SERVICE_ROLE') ||
+        key.includes('SECRET') ||
+        key.includes('TOKEN') ||
+        key.includes('AUTH') ||
+        key === 'CRON_SECRET'
+          ? 'encrypted'
+          : 'plain',
       target,
     }),
   })
@@ -123,6 +130,21 @@ async function main() {
       env.NEXT_PUBLIC_APP_URL?.startsWith('https://')
         ? env.NEXT_PUBLIC_APP_URL
         : `https://${projectName}.vercel.app`,
+  }
+
+  const optional = [
+    'CRON_SECRET',
+    'TWILIO_ACCOUNT_SID',
+    'TWILIO_AUTH_TOKEN',
+    'TWILIO_FROM_NUMBER',
+    'RESEND_API_KEY',
+    'IZNENADI_NOTIFY_EMAIL',
+    'RESEND_FROM_EMAIL',
+    'STRIPE_SECRET_KEY',
+    'STRIPE_WEBHOOK_SECRET',
+  ]
+  for (const key of optional) {
+    if (env[key]) vars[key] = env[key]
   }
 
   for (const [key, value] of Object.entries(vars)) {

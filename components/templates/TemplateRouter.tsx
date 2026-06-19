@@ -6,6 +6,8 @@ import UnlockPhone from '@/components/templates/UnlockPhone'
 import type { LoveMessagePayload, StoredPayload } from '@/lib/types/normalize-payload'
 import type { SecretQuizPayload } from '@/lib/types/secret-quiz'
 import type { UnlockPhonePayload } from '@/lib/types/unlock-phone'
+import Countdown from '@/components/templates/Countdown'
+import type { CountdownPayload } from '@/lib/types/countdown'
 
 interface TemplateRouterProps {
   template: string
@@ -20,6 +22,8 @@ export default function TemplateRouter({ template, data }: TemplateRouterProps) 
       return <SecretQuiz data={data as SecretQuizPayload} />
     case 'unlock_phone':
       return <UnlockPhone data={data as UnlockPhonePayload} />
+    case 'countdown':
+      return <Countdown data={data as CountdownPayload} />
     default:
       return (
         <div className="flex h-dvh items-center justify-center bg-black px-6 text-center text-white">

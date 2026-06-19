@@ -1,43 +1,49 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import AppIcon, { iconVariantForIndex, type AppIconVariant } from '@/components/experience/AppIcon'
 
 interface NotificationBannerProps {
   title: string
   body: string
   time?: string
-  appIcon?: string
+  iconVariant?: AppIconVariant
   onClick?: () => void
   index?: number
+  dimmed?: boolean
 }
 
 export default function NotificationBanner({
   title,
   body,
   time = 'sada',
-  appIcon = '💌',
+  iconVariant = 'message',
   onClick,
   index = 0,
+  dimmed = false,
 }: NotificationBannerProps) {
   return (
     <motion.button
       type="button"
       onClick={onClick}
-      className="w-full rounded-2xl border border-white/10 bg-white/12 p-3 text-left backdrop-blur-md transition hover:bg-white/18 active:scale-[0.98]"
-      initial={{ opacity: 0, y: -24, scale: 0.95 }}
+      disabled={dimmed}
+      className={`w-full rounded-2xl border border-white/15 p-3 text-left shadow-lg backdrop-blur-xl transition ${
+        dimmed
+          ? 'cursor-default bg-white/5 opacity-60'
+          : 'bg-white/18 hover:bg-white/22 active:scale-[0.98]'
+      }`}
+      initial={{ opacity: 0, y: -28, scale: 0.92 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ delay: index * 0.15, type: 'spring', stiffness: 320, damping: 24 }}
+      transition={{ delay: index * 0.12, type: 'spring', stiffness: 340, damping: 22 }}
     >
       <div className="flex items-start gap-3">
-        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/15 text-lg">
-          {appIcon}
-        </span>
+        <AppIcon variant={iconVariant} />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="truncate text-xs font-semibold text-white/90">{title}</p>
-            <span className="shrink-0 text-[10px] text-white/50">{time}</span>
+            <p className="truncate text-xs font-semibold text-white">{title}</p>
+            <span className="shrink-0 text-[10px] text-white/55">{time}</span>
           </div>
-          <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-white/75">{body}</p>
+          <p className="mt-0.5 line-clamp-2 text-sm leading-snug text-white/80">{body}</p>
         </div>
       </div>
     </motion.button>

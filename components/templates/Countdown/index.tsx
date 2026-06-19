@@ -4,33 +4,32 @@ import { useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ThemeProvider } from '@/components/experience/ThemeProvider'
 import { tierSupportsLightbox } from '@/lib/templates/registry'
-import { secretQuizToSceneData, type SecretQuizPayload } from '@/lib/types/secret-quiz'
+import { countdownToSceneData, type CountdownPayload } from '@/lib/types/countdown'
 import PhotosScene from '@/components/templates/LoveMessage/scenes/PhotosScene'
 import MessageScene from '@/components/templates/LoveMessage/scenes/MessageScene'
 import FinaleScene from '@/components/templates/LoveMessage/scenes/FinaleScene'
 import IntroScene from './scenes/IntroScene'
-import QuizScene from './scenes/QuizScene'
+import CountdownScene from './scenes/CountdownScene'
 
-type Phase = 'intro' | 'quiz' | 'photos' | 'message' | 'finale'
+type Phase = 'intro' | 'countdown' | 'photos' | 'message' | 'finale'
 
-interface SecretQuizProps {
-  data: SecretQuizPayload
+interface CountdownTemplateProps {
+  data: CountdownPayload
 }
 
-export default function SecretQuiz({ data }: SecretQuizProps) {
+export default function CountdownTemplate({ data }: CountdownTemplateProps) {
   const [phase, setPhase] = useState<Phase>('intro')
-  const sceneData = secretQuizToSceneData(data)
+  const sceneData = countdownToSceneData(data)
   const enableLightbox = tierSupportsLightbox(data.tier)
 
-  const loveMessageSceneProps = {
-    data: {
-      ...sceneData,
-      reasons: [],
-    },
+  const loveProps = {
+    data: { ...sceneData, reasons: [] },
     onAdvance: () => {},
     isLastScene: false,
     enableLightbox,
   }
+
+  const targetFuture = new Date(data.targetAt).getTime() > Date.now()
 
   return (
     <ThemeProvider data={sceneData}>
@@ -38,33 +37,27 @@ export default function SecretQuiz({ data }: SecretQuizProps) {
         <AnimatePresence mode="wait">
           {phase === 'intro' && (
             <motion.div key="intro" className="absolute inset-0" exit={{ opacity: 0, x: -30 }}>
-              <IntroScene data={data} onAdvance={() => setPhase('quiz')} />
+              <IntroScene data={data} onAdvance={() => setPhase(targetFuture ? 'countdown' : 'message')} />
             </motion.div>
           )}
-          {phase === 'quiz' && (
-            <motion.div key="quiz" className="absolute inset-0" exit={{ opacity: 0 }}>
-              <QuizScene data={data} onComplete={() => setPhase(data.photos.length > 0 ? 'photos' : 'message')} />
+          {phase === 'countdown' && (
+            <motion.div key="countdown" className="absolute inset-0" exit={{ opacity: 0 }}>
+              <CountdownScene data={data} onComplete={() => setPhase(data.photos.length > 0 ? 'photos' : 'message')} />
             </motion.div>
           )}
-          {phase === 'photos' && (
+          {phase === 'photos' && data.photos.length > 0 && (
             <motion.div key="photos" className="absolute inset-0" exit={{ opacity: 0, x: -30 }}>
-              <PhotosScene
-                {...loveMessageSceneProps}
-                onAdvance={() => setPhase('message')}
-              />
+              <PhotosScene {...loveProps} onAdvance={() => setPhase('message')} />
             </motion.div>
           )}
           {phase === 'message' && (
             <motion.div key="message" className="absolute inset-0" exit={{ opacity: 0, x: -30 }}>
-              <MessageScene
-                {...loveMessageSceneProps}
-                onAdvance={() => setPhase('finale')}
-              />
+              <MessageScene {...loveProps} onAdvance={() => setPhase('finale')} />
             </motion.div>
           )}
           {phase === 'finale' && (
             <motion.div key="finale" className="absolute inset-0">
-              <FinaleScene {...loveMessageSceneProps} isLastScene templateLabel="Tajni kviz" />
+              <FinaleScene {...loveProps} isLastScene templateLabel="Odbrojavanje" />
             </motion.div>
           )}
         </AnimatePresence>

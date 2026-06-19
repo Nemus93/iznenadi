@@ -1,71 +1,70 @@
 'use client'
 
 import { motion } from 'framer-motion'
+import AppIcon from '@/components/experience/AppIcon'
 
 interface NotificationDetailProps {
   title: string
   body: string
   imageUrl?: string
-  appIcon?: string
+  iconVariant?: 'message' | 'unknown' | 'unlock'
   onDismiss: () => void
+  embedded?: boolean
 }
 
 export default function NotificationDetail({
   title,
   body,
   imageUrl,
-  appIcon = '💌',
+  iconVariant = 'message',
   onDismiss,
+  embedded = false,
 }: NotificationDetailProps) {
+  const shell = embedded ? 'absolute inset-0 z-40' : 'fixed inset-0 z-50'
+
   return (
     <motion.div
-      className="absolute inset-0 z-30 flex flex-col bg-black/60 backdrop-blur-sm"
+      className={`${shell} flex flex-col justify-start bg-black/50 backdrop-blur-md`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       onClick={onDismiss}
     >
       <motion.div
-        className="mx-4 mt-14 rounded-3xl border border-white/15 bg-zinc-900/95 p-5 shadow-2xl"
-        initial={{ y: 40, opacity: 0, scale: 0.96 }}
+        className="mx-3 mt-3 rounded-2xl border border-white/20 bg-zinc-900/95 p-4 shadow-2xl"
+        initial={{ y: -20, opacity: 0, scale: 0.95 }}
         animate={{ y: 0, opacity: 1, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+        transition={{ type: 'spring', stiffness: 320, damping: 28 }}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-3">
-          <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-white/10 text-xl">
-            {appIcon}
-          </span>
+          <AppIcon variant={iconVariant} className="h-10 w-10" />
           <div>
             <p className="font-semibold text-white">{title}</p>
             <p className="text-xs text-white/50">sada</p>
           </div>
         </div>
 
-        <p className="mt-4 text-base leading-relaxed text-white/85">{body}</p>
+        <p className="mt-3 text-sm leading-relaxed text-white/90">{body}</p>
 
         {imageUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={imageUrl}
             alt=""
-            className="mt-4 w-full rounded-2xl object-cover"
-            style={{ maxHeight: '220px' }}
+            className="mt-3 w-full rounded-xl object-cover"
+            style={{ maxHeight: '180px' }}
           />
         )}
 
         <button
           type="button"
           onClick={onDismiss}
-          className="mt-5 w-full rounded-full bg-white/15 py-3 text-sm font-medium text-white transition hover:bg-white/25"
+          className="mt-4 w-full rounded-full bg-white/15 py-2.5 text-sm font-medium text-white transition hover:bg-white/25"
         >
           Zatvori
         </button>
       </motion.div>
-
-      <p className="mt-6 text-center text-xs tracking-widest text-white/40 uppercase">
-        tapni van kartice da zatvoriš
-      </p>
     </motion.div>
   )
 }

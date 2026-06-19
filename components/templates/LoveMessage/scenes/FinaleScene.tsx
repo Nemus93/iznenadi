@@ -47,7 +47,10 @@ function ConfettiItem({ emoji, col, index }: { emoji: string; col: number; index
   )
 }
 
-export default function FinaleScene({ data }: SceneProps) {
+export default function FinaleScene({
+  data,
+  templateLabel,
+}: SceneProps & { templateLabel?: string }) {
   const theme = useExperienceTheme()
 
   return (
@@ -119,7 +122,9 @@ export default function FinaleScene({ data }: SceneProps) {
           transition={{ delay: 1.8, duration: 0.7 }}
         >
           <p className="text-center text-sm leading-relaxed text-white/70">
-            Ovo iznenađenje napravila je ljubav ♥
+            {templateLabel
+              ? `${templateLabel} — napravio/la ${data.senderName}`
+              : 'Ovo iznenađenje napravila je ljubav ♥'}
           </p>
           <p
             className="mt-1 text-center text-xs tracking-wider"

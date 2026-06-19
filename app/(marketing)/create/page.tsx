@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import CreateWizard from './CreateWizard'
 import QuizWizard from './QuizWizard'
 import PhoneWizard from './PhoneWizard'
+import CountdownWizard from './CountdownWizard'
 import { getTemplate } from '@/lib/templates/registry'
 import { TIERS, type Tier } from '@/lib/types/surprise'
 
@@ -59,6 +60,21 @@ export default async function CreatePage({ searchParams }: CreatePageProps) {
           </div>
         )}
         <PhoneWizard templateName={template.name} />
+      </>
+    )
+  }
+
+  if (template.id === 'countdown') {
+    return (
+      <>
+        {paymentCancelled && (
+          <div className="mx-auto max-w-lg px-6 pt-6">
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+              Plaćanje je otkazano. Možeš nastaviti i pokušati ponovo.
+            </p>
+          </div>
+        )}
+        <CountdownWizard templateName={template.name} />
       </>
     )
   }

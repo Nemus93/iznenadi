@@ -4,12 +4,14 @@ import { useEffect } from 'react'
 import LoveMessage from '@/components/templates/LoveMessage'
 import SecretQuiz from '@/components/templates/SecretQuiz'
 import UnlockPhone from '@/components/templates/UnlockPhone'
+import Countdown from '@/components/templates/Countdown'
+import type { CountdownPayload } from '@/lib/types/countdown'
 import type { LoveMessagePayload, StoredPayload } from '@/lib/types/normalize-payload'
 import type { SecretQuizPayload } from '@/lib/types/secret-quiz'
 import type { UnlockPhonePayload } from '@/lib/types/unlock-phone'
 
 interface ExperiencePreviewModalProps {
-  template?: 'love_message' | 'secret_quiz' | 'unlock_phone'
+  template?: 'love_message' | 'secret_quiz' | 'unlock_phone' | 'countdown'
   data: StoredPayload
   open: boolean
   onClose: () => void
@@ -40,11 +42,13 @@ export default function ExperiencePreviewModal({
   if (!open) return null
 
   const resolvedTemplate =
-    template === 'unlock_phone' || 'notifications' in data
-      ? 'unlock_phone'
-      : template === 'secret_quiz' || 'quizQuestions' in data
-        ? 'secret_quiz'
-        : 'love_message'
+    template === 'countdown' || 'targetAt' in data
+      ? 'countdown'
+      : template === 'unlock_phone' || 'notifications' in data
+        ? 'unlock_phone'
+        : template === 'secret_quiz' || 'quizQuestions' in data
+          ? 'secret_quiz'
+          : 'love_message'
 
   return (
     <div className="fixed inset-0 z-[200] bg-black">
@@ -55,7 +59,9 @@ export default function ExperiencePreviewModal({
       >
         Zatvori pregled
       </button>
-      {resolvedTemplate === 'unlock_phone' ? (
+      {resolvedTemplate === 'countdown' ? (
+        <Countdown data={data as CountdownPayload} />
+      ) : resolvedTemplate === 'unlock_phone' ? (
         <UnlockPhone data={data as UnlockPhonePayload} />
       ) : resolvedTemplate === 'secret_quiz' ? (
         <SecretQuiz data={data as SecretQuizPayload} />

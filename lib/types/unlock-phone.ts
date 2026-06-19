@@ -1,9 +1,18 @@
 import { z } from 'zod'
 import { customColorsSchema, THEMES, type ExperienceSceneData } from './experience'
 import { phoneNotificationSchema } from './unlock-phone-types'
+import { normalizePhoneE164 } from '@/lib/sms'
 
 export type { PhoneNotification } from './unlock-phone-types'
 export { phoneNotificationSchema } from './unlock-phone-types'
+
+const phoneE164Schema = z
+  .string()
+  .min(1, 'Unesi broj telefona')
+  .refine((v) => normalizePhoneE164(v) !== null, {
+    message: 'Unesi ispravan broj (npr. 061 1234567 ili +38161...)',
+  })
+  .transform((v) => normalizePhoneE164(v)!)
 
 export const unlockPhonePayloadSchema = z.object({
   recipientName: z.string().min(1).max(50),
@@ -17,6 +26,10 @@ export const unlockPhonePayloadSchema = z.object({
   theme: z.enum(THEMES),
   customColors: customColorsSchema.optional(),
   tier: z.literal('premium').default('premium'),
+  smsEnabled: z.boolean().default(true),
+  recipientPhone: z.string().optional(),
+  smsConsent: z.boolean().optional(),
+  smsStartAt: z.string().datetime().optional(),
 })
 
 export type UnlockPhonePayload = z.infer<typeof unlockPhonePayloadSchema>
@@ -32,6 +45,10 @@ export const phoneCreateFormSchema = z
     themeMode: z.enum(['preset', 'custom']),
     theme: z.enum(THEMES),
     customColors: customColorsSchema.optional(),
+    smsEnabled: z.boolean(),
+    recipientPhone: z.string().optional(),
+    smsConsent: z.boolean(),
+    smsStartAt: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.themeMode === 'custom' && !data.customColors) {
@@ -40,6 +57,25 @@ export const phoneCreateFormSchema = z
         message: 'Izaberi custom boje',
         path: ['customColors'],
       })
+    }
+    if (data.smsEnabled) {
+      const parsed = data.recipientPhone
+        ? phoneE164Schema.safeParse(data.recipientPhone)
+        : { success: false as const }
+      if (!parsed.success) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Unesi ispravan broj telefona primaoca',
+          path: ['recipientPhone'],
+        })
+      }
+      if (!data.smsConsent) {
+        ctx.addIssue({
+          code: 'custom',
+          message: 'Potvrdi da imaš dozvolu za slanje poruka',
+          path: ['smsConsent'],
+        })
+      }
     }
   })
 
@@ -58,12 +94,21 @@ export const defaultPhoneCreateFormValues: PhoneCreateFormValues = {
   finaleText: '',
   themeMode: 'preset',
   theme: 'rose',
+  smsEnabled: true,
+  recipientPhone: '',
+  smsConsent: false,
+  smsStartAt: '',
 }
 
 export function phoneFormValuesToPayload(
   values: PhoneCreateFormValues,
   photoUrls: string[]
 ): UnlockPhonePayload {
+  const phone =
+    values.smsEnabled && values.recipientPhone
+      ? normalizePhoneE164(values.recipientPhone) ?? undefined
+      : undefined
+
   return {
     recipientName: values.recipientName.trim(),
     senderName: values.senderName.trim(),
@@ -83,6 +128,12 @@ export function phoneFormValuesToPayload(
     theme: values.theme,
     customColors: values.themeMode === 'custom' ? values.customColors : undefined,
     tier: 'premium',
+    smsEnabled: values.smsEnabled,
+    recipientPhone: phone,
+    smsConsent: values.smsConsent,
+    smsStartAt: values.smsStartAt
+      ? new Date(values.smsStartAt).toISOString()
+      : undefined,
   }
 }
 

@@ -1,10 +1,15 @@
 import { loveMessagePayloadSchema, type LoveMessagePayload } from './surprise'
 import { secretQuizPayloadSchema, type SecretQuizPayload } from './secret-quiz'
 import { unlockPhonePayloadSchema, type UnlockPhonePayload } from './unlock-phone'
+import { countdownPayloadSchema, type CountdownPayload } from './countdown'
 
-export type StoredPayload = LoveMessagePayload | SecretQuizPayload | UnlockPhonePayload
+export type StoredPayload =
+  | LoveMessagePayload
+  | SecretQuizPayload
+  | UnlockPhonePayload
+  | CountdownPayload
 
-export type { LoveMessagePayload, SecretQuizPayload, UnlockPhonePayload }
+export type { LoveMessagePayload, SecretQuizPayload, UnlockPhonePayload, CountdownPayload }
 
 export function normalizePayload(
   raw: unknown,
@@ -18,7 +23,16 @@ export function normalizePayload(
     themeMode: data.themeMode ?? 'preset',
     tier:
       data.tier ??
-      (template === 'secret_quiz' || template === 'unlock_phone' ? 'premium' : 'basic'),
+      (template === 'secret_quiz' || template === 'unlock_phone'
+        ? 'premium'
+        : template === 'countdown'
+          ? 'standard'
+          : 'basic'),
+  }
+
+  if (template === 'countdown' || typeof data.targetAt === 'string') {
+    const parsed = countdownPayloadSchema.safeParse(normalized)
+    return parsed.success ? parsed.data : null
   }
 
   if (template === 'unlock_phone' || Array.isArray(data.notifications)) {

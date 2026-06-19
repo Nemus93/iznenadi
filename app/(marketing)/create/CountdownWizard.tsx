@@ -2,21 +2,20 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useForm, useFieldArray } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import Link from 'next/link'
 import ExperiencePreviewModal from '@/components/experience/ExperiencePreviewModal'
-import {
-  defaultQuizCreateFormValues,
-  quizCreateFormSchema,
-  quizFormValuesToPayload,
-  type QuizCreateFormValues,
-} from '@/lib/types/secret-quiz'
-import type { Theme } from '@/lib/types/surprise'
-import { TIER_LABELS, tierSupportsCustomColors } from '@/lib/templates/registry'
-import { STANDARD_THEMES, THEME_LABELS, THEME_PRESETS } from '@/lib/themes/presets'
-import { handleCreateSurpriseResult } from '@/lib/handle-create-result'
 import WizardThemeStep from '@/components/create/WizardThemeStep'
+import {
+  countdownCreateFormSchema,
+  countdownFormToPayload,
+  defaultCountdownFormValues,
+  type CountdownCreateFormValues,
+} from '@/lib/types/countdown'
+import { TIER_LABELS, tierSupportsCustomColors } from '@/lib/templates/registry'
+import { THEME_LABELS } from '@/lib/themes/presets'
+import { handleCreateSurpriseResult } from '@/lib/handle-create-result'
 import { createSurpriseAction } from './actions'
 import {
   compressImage,
@@ -24,27 +23,34 @@ import {
   MAX_TOTAL_UPLOAD_BYTES,
 } from '@/lib/compress-image'
 
-const STEPS = ['Ko', 'Pitanja', 'Slike', 'Poruka', 'Izgled', 'Pregled'] as const
+const STEPS = ['Ko', 'Datum', 'Slike', 'Poruka', 'Izgled', 'Pregled'] as const
 const MAX_PHOTOS = 5
 
 const OCCASION_PRESETS = [
   { label: 'Godišnjica', value: 'Srećna godišnjica' },
   { label: 'Valentinovo', value: 'Srećno Valentinovo' },
-  { label: 'Izvinjenje', value: 'Oprosti mi...' },
+  { label: 'Rođendan', value: 'Srećan rođendan' },
   { label: 'Samo tako', value: 'Samo htedoh da te iznenadim' },
 ]
 
 const DEFAULT_CUSTOM_COLORS = {
-  primary: '#7c3aed',
-  accent: '#c084fc',
-  background: '#2d0a4e',
+  primary: '#db2777',
+  accent: '#f472b6',
+  background: '#3d0a1f',
 }
 
-interface QuizWizardProps {
+interface CountdownWizardProps {
   templateName: string
 }
 
-export default function QuizWizard({ templateName }: QuizWizardProps) {
+function defaultTargetLocal(): string {
+  const d = new Date()
+  d.setDate(d.getDate() + 7)
+  d.setHours(20, 0, 0, 0)
+  return d.toISOString().slice(0, 16)
+}
+
+export default function CountdownWizard({ templateName }: CountdownWizardProps) {
   const router = useRouter()
   const [step, setStep] = useState(0)
   const [photos, setPhotos] = useState<File[]>([])
@@ -54,19 +60,14 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
   const [submitStatus, setSubmitStatus] = useState<string | null>(null)
   const [showPreview, setShowPreview] = useState(false)
 
-  const form = useForm<QuizCreateFormValues>({
-    resolver: zodResolver(quizCreateFormSchema),
-    defaultValues: defaultQuizCreateFormValues,
+  const form = useForm<CountdownCreateFormValues>({
+    resolver: zodResolver(countdownCreateFormSchema),
+    defaultValues: { ...defaultCountdownFormValues, targetAt: defaultTargetLocal() },
     mode: 'onTouched',
   })
 
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: 'quizQuestions',
-  })
-
   const values = form.watch()
-  const allowCustomColors = tierSupportsCustomColors('premium')
+  const allowCustomColors = tierSupportsCustomColors('standard')
 
   async function goNext() {
     setSubmitError(null)
@@ -75,16 +76,11 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
       if (!valid) return
     }
     if (step === 1) {
-      const valid = await form.trigger(
-        fields.flatMap((_, i) => [
-          `quizQuestions.${i}.question` as const,
-          `quizQuestions.${i}.answer` as const,
-        ])
-      )
+      const valid = await form.trigger(['targetAt', 'teaserMessage'])
       if (!valid) return
     }
-    if (step === 2 && photos.length === 0) {
-      setSubmitError('Dodaj bar jednu sliku.')
+    if (step === 2 && photos.length > MAX_PHOTOS) {
+      setSubmitError(`Maksimalno ${MAX_PHOTOS} slika.`)
       return
     }
     if (step === 3) {
@@ -94,6 +90,10 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
     if (step === 4) {
       const valid = await form.trigger(['themeMode', 'theme', 'customColors'])
       if (!valid) return
+    }
+    if (step === STEPS.length - 1) {
+      await form.handleSubmit(onSubmit)()
+      return
     }
     setStep((s) => Math.min(s + 1, STEPS.length - 1))
   }
@@ -116,34 +116,36 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
   }
 
   function buildPreviewPayload() {
-    return quizFormValuesToPayload(
+    return countdownFormToPayload(
       values,
       photoPreviews.length > 0
         ? photoPreviews
-        : ['https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&q=80']
+        : ['https://images.unsplash.com/photo-1518199266791-5375a83190b7?w=800&q=80'],
+      'standard'
     )
   }
 
-  async function onSubmit(data: QuizCreateFormValues) {
+  async function onSubmit(data: CountdownCreateFormValues) {
     setSubmitError(null)
     setIsSubmitting(true)
     setSubmitStatus(null)
 
     try {
-      setSubmitStatus('Kompresija slika...')
-      const compressed = await Promise.all(photos.map(compressImage))
-      setSubmitStatus('Objavljujem...')
-      const totalSize = getTotalFileSize(compressed)
-
-      if (totalSize > MAX_TOTAL_UPLOAD_BYTES) {
-        setSubmitError('Slike su prevelike. Probaj manje slika.')
-        return
+      const compressed = photos.length > 0 ? await Promise.all(photos.map(compressImage)) : []
+      if (compressed.length > 0) {
+        setSubmitStatus('Kompresija slika...')
+        const totalSize = getTotalFileSize(compressed)
+        if (totalSize > MAX_TOTAL_UPLOAD_BYTES) {
+          setSubmitError('Slike su prevelike. Probaj manje slika.')
+          return
+        }
       }
 
+      setSubmitStatus('Objavljujem...')
       const formData = new FormData()
       formData.set('payload', JSON.stringify(data))
-      formData.set('template', 'secret_quiz')
-      formData.set('tier', 'premium')
+      formData.set('template', 'countdown')
+      formData.set('tier', 'standard')
       for (const photo of compressed) {
         formData.append('photos', photo)
       }
@@ -161,6 +163,9 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
   const themeLabel =
     values.themeMode === 'custom' ? 'Tvoja kombinacija' : THEME_LABELS[values.theme]
 
+  const inputClass =
+    'w-full rounded-xl border border-zinc-800 bg-zinc-900/50 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-pink-500 focus:outline-none'
+
   return (
     <>
       <div className="mx-auto flex min-h-dvh max-w-lg flex-col px-6 py-10">
@@ -168,9 +173,9 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
           <Link href="/templates" className="text-sm text-zinc-500 hover:text-zinc-300">
             ← Promeni template
           </Link>
-          <h1 className="mt-4 font-serif text-3xl font-bold">Napravi tajni kviz</h1>
+          <h1 className="mt-4 font-serif text-3xl font-bold">Napravi odbrojavanje</h1>
           <p className="mt-1 text-sm text-zinc-400">
-            {templateName} · {TIER_LABELS.premium} · korak {step + 1} od {STEPS.length}:{' '}
+            {templateName} · {TIER_LABELS.standard} · korak {step + 1} od {STEPS.length}:{' '}
             {STEPS[step]}
           </p>
           <div className="mt-4 flex gap-1">
@@ -213,85 +218,44 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
           )}
 
           {step === 1 && (
-            <div className="space-y-5">
-              <p className="text-sm text-zinc-400">
-                Postavi 3–5 pitanja samo vi znate. Tačan odgovor otključava sledeći korak.
+            <div className="space-y-4">
+              <Field label="Datum i vreme otključavanja" error={form.formState.errors.targetAt?.message}>
+                <input
+                  type="datetime-local"
+                  {...form.register('targetAt')}
+                  className={inputClass}
+                />
+              </Field>
+              <Field label="Teaser poruka (pre odbrojavanja)" error={form.formState.errors.teaserMessage?.message}>
+                <input
+                  {...form.register('teaserMessage')}
+                  placeholder="Nešto posebno te čeka..."
+                  className={inputClass}
+                />
+              </Field>
+              <p className="text-xs text-zinc-500">
+                Primalac vidi odbrojavanje do ovog momenta, pa tek onda poruku.
               </p>
-              {fields.map((field, index) => (
-                <div
-                  key={field.id}
-                  className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs tracking-wider text-zinc-500 uppercase">
-                      Pitanje {index + 1}
-                    </span>
-                    {fields.length > 3 && (
-                      <button
-                        type="button"
-                        onClick={() => remove(index)}
-                        className="text-xs text-zinc-500 hover:text-red-400"
-                      >
-                        Ukloni
-                      </button>
-                    )}
-                  </div>
-                  <input
-                    {...form.register(`quizQuestions.${index}.question`)}
-                    placeholder="npr. Gde smo se prvi put poljubili?"
-                    className={inputClass}
-                  />
-                  {form.formState.errors.quizQuestions?.[index]?.question && (
-                    <p className="text-sm text-red-400">
-                      {form.formState.errors.quizQuestions[index]?.question?.message}
-                    </p>
-                  )}
-                  <input
-                    {...form.register(`quizQuestions.${index}.answer`)}
-                    placeholder="Tačan odgovor (npr. Kalemegdan)"
-                    className={inputClass}
-                  />
-                  {form.formState.errors.quizQuestions?.[index]?.answer && (
-                    <p className="text-sm text-red-400">
-                      {form.formState.errors.quizQuestions[index]?.answer?.message}
-                    </p>
-                  )}
-                  <input
-                    {...form.register(`quizQuestions.${index}.hint`)}
-                    placeholder="Hint (opciono, npr. Počinje na K...)"
-                    className={inputClass}
-                  />
-                </div>
-              ))}
-              {fields.length < 5 && (
-                <button
-                  type="button"
-                  onClick={() => append({ question: '', answer: '', hint: '' })}
-                  className="text-sm text-pink-400 hover:text-pink-300"
-                >
-                  + Dodaj pitanje
-                </button>
-              )}
             </div>
           )}
 
           {step === 2 && (
             <div className="space-y-4">
               <p className="text-sm text-zinc-400">
-                Dodaj 1–{MAX_PHOTOS} slika (max 5 MB). Premium uključuje lightbox uvećanje.
+                Slike su opcione (do {MAX_PHOTOS}). Možeš preskočiti ako ne želiš galeriju.
               </p>
               <input
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple
                 onChange={handlePhotoChange}
-                className="block w-full text-sm text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-pink-500 file:px-4 file:py-2 file:text-sm file:text-white hover:file:bg-pink-400"
+                className="w-full text-sm text-zinc-400 file:mr-4 file:rounded-full file:border-0 file:bg-pink-500 file:px-4 file:py-2 file:text-sm file:text-white"
               />
               {photoPreviews.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
                   {photoPreviews.map((src, i) => (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img key={src} src={src} alt={`Preview ${i + 1}`} className="aspect-square rounded-xl object-cover" />
+                    <img key={i} src={src} alt="" className="aspect-square rounded-xl object-cover" />
                   ))}
                 </div>
               )}
@@ -300,11 +264,11 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
 
           {step === 3 && (
             <div className="space-y-4">
-              <Field label="Poruka posle kviza" error={form.formState.errors.mainMessage?.message}>
+              <Field label="Glavna poruka (posle odbrojavanja)" error={form.formState.errors.mainMessage?.message}>
                 <textarea
                   {...form.register('mainMessage')}
                   rows={6}
-                  placeholder="Poruka koju vidi tek kad prođe kviz..."
+                  placeholder="Poruka koja se otkriva kad istekne vreme..."
                   className={inputClass}
                 />
               </Field>
@@ -331,10 +295,9 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
             <div className="space-y-4">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-900/50 p-5 text-sm">
                 <Row label="Template" value={templateName} />
-                <Row label="Nivo" value={TIER_LABELS.premium} />
                 <Row label="Primalac" value={values.recipientName} />
-                <Row label="Pitanja" value={`${values.quizQuestions.filter((q) => q.question).length} uneto`} />
-                <Row label="Slike" value={`${photos.length} izabrano`} />
+                <Row label="Datum" value={values.targetAt ? new Date(values.targetAt).toLocaleString('sr-RS') : '—'} />
+                <Row label="Slike" value={photos.length > 0 ? `${photos.length} izabrano` : 'Bez slika'} />
                 <Row label="Izgled" value={themeLabel} />
               </div>
               <button
@@ -342,7 +305,7 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
                 onClick={() => setShowPreview(true)}
                 className="w-full rounded-full border border-zinc-700 py-3 text-sm text-zinc-300 hover:border-pink-500/50 hover:text-pink-300"
               >
-                Pregledaj kviz pre objave
+                Pregledaj iskustvo pre objave
               </button>
             </div>
           )}
@@ -350,6 +313,7 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
           {submitError && (
             <p className="rounded-lg bg-red-500/10 px-4 py-3 text-sm text-red-400">{submitError}</p>
           )}
+          {submitStatus && <p className="text-center text-sm text-zinc-500">{submitStatus}</p>}
 
           <div className="mt-auto flex gap-3 pt-4">
             {step > 0 && (
@@ -362,39 +326,33 @@ export default function QuizWizard({ templateName }: QuizWizardProps) {
                 Nazad
               </button>
             )}
-            {step < STEPS.length - 1 ? (
-              <button
-                type="button"
-                onClick={goNext}
-                className="flex-1 rounded-full bg-pink-500 py-3 text-sm font-medium text-white hover:bg-pink-400"
-              >
-                Dalje
-              </button>
-            ) : (
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="flex-1 rounded-full bg-pink-500 py-3 text-sm font-medium text-white hover:bg-pink-400 disabled:opacity-50"
-              >
-                {isSubmitting ? (submitStatus ?? 'Objavljujem...') : 'Objavi kviz'}
-              </button>
-            )}
+            <button
+              type="button"
+              onClick={goNext}
+              disabled={isSubmitting}
+              className="flex-1 rounded-full bg-pink-500 py-3 text-sm font-medium text-white hover:bg-pink-400 disabled:opacity-50"
+            >
+              {isSubmitting
+                ? 'Objavljujem...'
+                : step === STEPS.length - 1
+                  ? 'Objavi iznenađenje'
+                  : 'Dalje'}
+            </button>
           </div>
         </form>
       </div>
 
-      <ExperiencePreviewModal
-        template="secret_quiz"
-        data={buildPreviewPayload()}
-        open={showPreview}
-        onClose={() => setShowPreview(false)}
-      />
+      {showPreview && (
+        <ExperiencePreviewModal
+          template="countdown"
+          data={buildPreviewPayload()}
+          open={showPreview}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </>
   )
 }
-
-const inputClass =
-  'w-full rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-white placeholder:text-zinc-600 focus:border-pink-500 focus:outline-none'
 
 function Field({
   label,
@@ -406,67 +364,19 @@ function Field({
   children: React.ReactNode
 }) {
   return (
-    <div>
-      <label className="mb-1.5 block text-sm text-zinc-400">{label}</label>
+    <label className="block space-y-2">
+      <span className="text-sm text-zinc-400">{label}</span>
       {children}
-      {error && <p className="mt-1 text-sm text-red-400">{error}</p>}
-    </div>
+      {error && <p className="text-sm text-red-400">{error}</p>}
+    </label>
   )
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 py-1">
+    <div className="flex justify-between gap-4 border-b border-zinc-800 py-2 last:border-0">
       <span className="text-zinc-500">{label}</span>
       <span className="text-right text-white">{value}</span>
-    </div>
-  )
-}
-
-function ThemePresetCard({
-  theme,
-  selected,
-  onSelect,
-}: {
-  theme: Theme
-  selected: boolean
-  onSelect: () => void
-}) {
-  const colors = THEME_PRESETS[theme]
-  return (
-    <label
-      className={`cursor-pointer rounded-2xl border p-3 text-center transition ${
-        selected ? 'border-pink-500 bg-pink-500/10' : 'border-zinc-700 hover:border-zinc-500'
-      }`}
-    >
-      <input type="radio" checked={selected} onChange={onSelect} className="sr-only" />
-      <div
-        className="mx-auto mb-2 h-10 w-10 rounded-full"
-        style={{ background: `linear-gradient(135deg, ${colors.bgStart}, ${colors.bgEnd})` }}
-      />
-      <span className="text-xs">{THEME_LABELS[theme]}</span>
-    </label>
-  )
-}
-
-function ColorPickerField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string
-  value: string
-  onChange: (value: string) => void
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-sm text-zinc-400">{label}</span>
-      <input
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="h-9 w-9 cursor-pointer rounded-lg border-0 bg-transparent"
-      />
     </div>
   )
 }

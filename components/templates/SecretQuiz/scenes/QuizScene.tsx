@@ -19,6 +19,7 @@ export default function QuizScene({ data, onComplete }: QuizSceneProps) {
   const [attempts, setAttempts] = useState(0)
   const [input, setInput] = useState('')
   const [feedback, setFeedback] = useState<'idle' | 'wrong' | 'correct'>('idle')
+  const [celebrating, setCelebrating] = useState(false)
   const [shake, setShake] = useState(false)
 
   const question = data.quizQuestions[questionIndex]
@@ -31,16 +32,17 @@ export default function QuizScene({ data, onComplete }: QuizSceneProps) {
 
     if (answersMatch(input, question.answer)) {
       setFeedback('correct')
-      setTimeout(() => {
-        if (isLastQuestion) {
-          onComplete()
-        } else {
+      if (isLastQuestion) {
+        setCelebrating(true)
+        setTimeout(() => onComplete(), 1400)
+      } else {
+        setTimeout(() => {
           setQuestionIndex((i) => i + 1)
           setAttempts(0)
           setInput('')
           setFeedback('idle')
-        }
-      }, 800)
+        }, 800)
+      }
       return
     }
 
@@ -158,6 +160,30 @@ export default function QuizScene({ data, onComplete }: QuizSceneProps) {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {celebrating && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center bg-black/40 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="text-center"
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 200, damping: 14 }}
+            >
+              <p className="text-6xl">🎉</p>
+              <p className="mt-4 font-serif text-2xl font-bold text-white">Sve tačno!</p>
+              <p className="mt-2 text-sm" style={{ color: theme.accentMuted }}>
+                Otključavam poruku...
+              </p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

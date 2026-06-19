@@ -99,6 +99,7 @@ async function main() {
 
   let needInit = false
   let needPayment = false
+  let needNotificationJobs = false
 
   const probe = await supabase.from('surprises').select('slug').limit(1)
   if (!probe.error) {
@@ -110,9 +111,32 @@ async function main() {
     } else if (!cols.error) {
       console.log('OK: kolone tier/payment_status')
     }
+    const phoneCol = await supabase.from('surprises').select('recipient_phone').limit(1)
+    if (phoneCol.error?.message?.includes('recipient_phone')) {
+      needNotificationJobs = true
+      console.log('NEED: migracija notification_jobs (recipient_phone)')
+    } else if (!phoneCol.error) {
+      console.log('OK: kolona recipient_phone')
+    }
   } else {
     console.log('surprises:', probe.error.message)
     needInit = true
+  }
+
+  const jobsProbe = await supabase.from('notification_jobs').select('id').limit(1)
+  if (jobsProbe.error?.message?.includes('notification_jobs')) {
+    needNotificationJobs = true
+    console.log('NEED: migracija notification_jobs')
+  } else if (!jobsProbe.error) {
+    console.log('OK: tabela notification_jobs')
+  }
+
+  const customProbe = await supabase.from('custom_requests').select('id').limit(1)
+  if (customProbe.error?.message?.includes('custom_requests')) {
+    needNotificationJobs = true
+    console.log('NEED: migracija custom_requests')
+  } else if (!customProbe.error) {
+    console.log('OK: tabela custom_requests')
   }
 
   const { data: buckets } = await supabase.storage.listBuckets()
@@ -131,6 +155,10 @@ async function main() {
     files.push('20260616180000_add_payment.sql')
   }
 
+  if (needNotificationJobs) {
+    files.push('20260619120000_notification_jobs.sql')
+  }
+
   if (files.length === 0) {
     console.log('Nema migracija za primenu.')
     return
@@ -147,16 +175,26 @@ async function main() {
     process.exit(2)
   }
 
+  async function runSql(sql) {
+    if (accessToken && projectRef) {
+      await runSqlViaManagementApi(accessToken, projectRef, sql)
+      return
+    }
+    if (env.SUPABASE_DB_URL) {
+      await runSqlViaPg(env.SUPABASE_DB_URL, sql)
+      return
+    }
+    if (dbPassword && projectRef) {
+      await runSqlWithPassword(projectRef, dbPassword, sql)
+      return
+    }
+    throw new Error('Nema načina da se pokrene SQL')
+  }
+
   for (const file of files) {
     const sql = readFileSync(join(migrationsDir, file), 'utf8')
     console.log(`Running ${file}...`)
-    if (env.SUPABASE_DB_URL) {
-      await runSqlViaPg(env.SUPABASE_DB_URL, sql)
-    } else if (dbPassword && projectRef) {
-      await runSqlWithPassword(projectRef, dbPassword, sql)
-    } else if (accessToken && projectRef) {
-      await runSqlViaManagementApi(accessToken, projectRef, sql)
-    }
+    await runSql(sql)
     console.log(`Done ${file}`)
   }
 

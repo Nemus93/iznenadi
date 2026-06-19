@@ -16,10 +16,17 @@ import {
   phoneFormValuesToPayload,
   unlockPhonePayloadSchema,
 } from '@/lib/types/unlock-phone'
+import {
+  countdownCreateFormSchema,
+  countdownFormToPayload,
+  countdownPayloadSchema,
+} from '@/lib/types/countdown'
 import { tierRequiresPayment } from '@/lib/billing'
 import { getMaxPhotos, getTemplate } from '@/lib/templates/registry'
 import { generateSurpriseSlug } from '@/lib/slug'
 import { createCheckoutSession } from '@/lib/stripe'
+import { scheduleNotificationJobs } from '@/lib/notification-jobs'
+import { normalizePhoneE164 } from '@/lib/sms'
 import {
   insertSurprise,
   updateSurpriseCheckout,
@@ -70,9 +77,15 @@ export async function createSurpriseAction(
 
   const maxPhotos = getMaxPhotos(tier)
   const files = formData.getAll('photos').filter((f): f is File => f instanceof File && f.size > 0)
+  const minPhotos = templateId === 'countdown' ? 0 : 1
 
-  if (files.length < 1 || files.length > maxPhotos) {
-    return { error: `Dodaj između 1 i ${maxPhotos} slika.` }
+  if (files.length < minPhotos || files.length > maxPhotos) {
+    return {
+      error:
+        minPhotos === 0
+          ? `Maksimalno ${maxPhotos} slika.`
+          : `Dodaj između 1 i ${maxPhotos} slika.`,
+    }
   }
 
   for (const file of files) {
@@ -126,6 +139,39 @@ export async function createSurpriseAction(
       return { error: 'Proveri sva polja pre objave.' }
     }
 
+    return publishWithRetry(slug, templateId, tier, validated.data, {
+      smsSchedule:
+        validated.data.smsEnabled && validated.data.recipientPhone
+          ? {
+              phone: validated.data.recipientPhone,
+              notifications: validated.data.notifications,
+              senderName: validated.data.senderName,
+              startAt: validated.data.smsStartAt
+                ? new Date(validated.data.smsStartAt)
+                : new Date(),
+            }
+          : undefined,
+    })
+  }
+
+  if (templateId === 'countdown') {
+    let parsed
+    try {
+      parsed = countdownCreateFormSchema.parse(JSON.parse(raw))
+    } catch {
+      return { error: 'Proveri sva polja pre objave.' }
+    }
+
+    const payload = countdownFormToPayload(
+      parsed,
+      photoUrls,
+      tier === 'basic' ? 'standard' : tier
+    )
+    const validated = countdownPayloadSchema.safeParse(payload)
+    if (!validated.success) {
+      return { error: 'Proveri sva polja pre objave.' }
+    }
+
     return publishWithRetry(slug, templateId, tier, validated.data)
   }
 
@@ -149,16 +195,29 @@ async function publishWithRetry(
   slug: string,
   templateId: string,
   tier: Tier,
-  payload: Parameters<typeof insertSurprise>[3]
+  payload: Parameters<typeof insertSurprise>[3],
+  extras?: {
+    smsSchedule?: {
+      phone: string
+      notifications: { title: string; body: string }[]
+      senderName: string
+      startAt: Date
+    }
+  }
 ): Promise<CreateSurpriseResult> {
   const needsPayment = tierRequiresPayment(tier)
   let currentSlug = slug
   let attempt = 0
 
+  const recipientPhone = extras?.smsSchedule?.phone
+    ? normalizePhoneE164(extras.smsSchedule.phone)
+    : null
+
   while (attempt < 3) {
     const result = await insertSurprise(currentSlug, templateId, tier, payload, {
       status: needsPayment ? 'draft' : 'published',
       paymentStatus: needsPayment ? 'pending' : 'free',
+      recipientPhone: recipientPhone ?? undefined,
     })
 
     if ('error' in result) {
@@ -168,6 +227,20 @@ async function publishWithRetry(
       currentSlug = generateSurpriseSlug()
       attempt++
       continue
+    }
+
+    if (extras?.smsSchedule && recipientPhone) {
+      const scheduled = await scheduleNotificationJobs(
+        result.id,
+        recipientPhone,
+        extras.smsSchedule.notifications,
+        currentSlug,
+        extras.smsSchedule.senderName,
+        extras.smsSchedule.startAt
+      )
+      if ('error' in scheduled) {
+        return { error: scheduled.error }
+      }
     }
 
     if (needsPayment) {

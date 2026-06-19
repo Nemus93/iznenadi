@@ -12,6 +12,8 @@ function useTypewriter(text: string, speed = 35) {
 
   useEffect(() => {
     let i = 0
+    setDisplayed('')
+    setDone(false)
     const timer = setInterval(() => {
       i++
       setDisplayed(text.slice(0, i))
@@ -23,7 +25,12 @@ function useTypewriter(text: string, speed = 35) {
     return () => clearInterval(timer)
   }, [text, speed])
 
-  return { displayed, done }
+  function skip() {
+    setDisplayed(text)
+    setDone(true)
+  }
+
+  return { displayed, done, skip }
 }
 
 export default function MessageScene({ data, onAdvance }: SceneProps) {
@@ -48,13 +55,21 @@ function MessageSceneBody({
   theme: ReturnType<typeof useExperienceTheme>
   onAdvance: SceneProps['onAdvance']
 }) {
-  const { displayed, done } = useTypewriter(data.mainMessage, 32)
+  const { displayed, done, skip } = useTypewriter(data.mainMessage, 32)
+
+  function handleTap() {
+    if (done) {
+      onAdvance()
+      return
+    }
+    skip()
+  }
 
   return (
     <div
       className="relative flex h-full w-full cursor-pointer flex-col items-center justify-center overflow-hidden px-6"
       style={{ background: sceneBackground(theme) }}
-      onClick={done ? onAdvance : undefined}
+      onClick={handleTap}
     >
       <div
         className="pointer-events-none absolute bottom-0 left-1/2 -translate-x-1/2"
@@ -125,17 +140,15 @@ function MessageSceneBody({
         )}
       </div>
 
-      {done && (
-        <motion.p
-          className="absolute bottom-16 text-xs tracking-widest uppercase"
-          style={{ color: theme.accentMuted }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-        >
-          tapni za finale
-        </motion.p>
-      )}
+      <motion.p
+        className="absolute bottom-16 text-xs tracking-widest uppercase"
+        style={{ color: theme.accentMuted }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.8 }}
+      >
+        {done ? 'tapni za finale' : 'tapni da preskočiš pisanje'}
+      </motion.p>
     </div>
   )
 }

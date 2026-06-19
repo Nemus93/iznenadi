@@ -22,6 +22,7 @@ import {
 } from '@/lib/templates/registry'
 import { BASIC_THEMES, STANDARD_THEMES, THEME_LABELS, THEME_PRESETS } from '@/lib/themes/presets'
 import { handleCreateSurpriseResult } from '@/lib/handle-create-result'
+import WizardThemeStep from '@/components/create/WizardThemeStep'
 import { createSurpriseAction } from './actions'
 import {
   compressImage,
@@ -326,99 +327,13 @@ export default function CreateWizard({ templateId, tier, templateName }: CreateW
           )}
 
           {step === 4 && (
-            <div className="space-y-5">
-              {allowCustomColors && (
-                <div className="flex gap-2 rounded-xl border border-zinc-800 p-1">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue('themeMode', 'preset')
-                      form.setValue('customColors', undefined)
-                    }}
-                    className={`flex-1 rounded-lg py-2 text-sm transition ${
-                      values.themeMode === 'preset'
-                        ? 'bg-pink-500 text-white'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Preset boje
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      form.setValue('themeMode', 'custom')
-                      form.setValue('customColors', DEFAULT_CUSTOM_COLORS)
-                    }}
-                    className={`flex-1 rounded-lg py-2 text-sm transition ${
-                      values.themeMode === 'custom'
-                        ? 'bg-pink-500 text-white'
-                        : 'text-zinc-400 hover:text-white'
-                    }`}
-                  >
-                    Tvoja kombinacija
-                  </button>
-                </div>
-              )}
-
-              {values.themeMode === 'preset' && (
-                <div className={`grid gap-3 ${availableThemes.length > 3 ? 'grid-cols-3' : 'grid-cols-3'}`}>
-                  {availableThemes.map((theme) => (
-                    <ThemePresetCard
-                      key={theme}
-                      theme={theme}
-                      selected={values.theme === theme}
-                      onSelect={() => form.setValue('theme', theme)}
-                    />
-                  ))}
-                </div>
-              )}
-
-              {values.themeMode === 'custom' && allowCustomColors && (
-                <div className="space-y-4 rounded-2xl border border-zinc-800 bg-zinc-900/50 p-4">
-                  <ColorPickerField
-                    label="Primarna"
-                    value={values.customColors?.primary ?? DEFAULT_CUSTOM_COLORS.primary}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        primary: v,
-                      })
-                    }
-                  />
-                  <ColorPickerField
-                    label="Akcent"
-                    value={values.customColors?.accent ?? DEFAULT_CUSTOM_COLORS.accent}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        accent: v,
-                      })
-                    }
-                  />
-                  <ColorPickerField
-                    label="Pozadina"
-                    value={values.customColors?.background ?? DEFAULT_CUSTOM_COLORS.background}
-                    onChange={(v) =>
-                      form.setValue('customColors', {
-                        ...(values.customColors ?? DEFAULT_CUSTOM_COLORS),
-                        background: v,
-                      })
-                    }
-                  />
-                  <ThemePreviewSwatch
-                    primary={values.customColors?.primary ?? DEFAULT_CUSTOM_COLORS.primary}
-                    accent={values.customColors?.accent ?? DEFAULT_CUSTOM_COLORS.accent}
-                    background={values.customColors?.background ?? DEFAULT_CUSTOM_COLORS.background}
-                  />
-                </div>
-              )}
-
-              {form.formState.errors.customColors?.message && (
-                <p className="text-sm text-red-400">
-                  {form.formState.errors.customColors.message}
-                </p>
-              )}
-            </div>
+            <WizardThemeStep
+              form={form}
+              values={values}
+              allowCustomColors={allowCustomColors}
+              themes={availableThemes}
+              defaultCustomColors={DEFAULT_CUSTOM_COLORS}
+            />
           )}
 
           {step === 5 && (

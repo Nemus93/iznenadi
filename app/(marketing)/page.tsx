@@ -11,7 +11,8 @@ const steps = [
   },
   {
     title: 'Pošalji',
-    description: 'Pošalji preko WhatsApp-a, SMS-a ili bilo kog chata. Primalac tapne i iznenadi se.',
+    description:
+      'Pošalji link ili zakazi prave SMS notifikacije na telefon primaoca — misteriozno i personalizovano.',
   },
 ]
 

@@ -80,23 +80,29 @@ export async function insertSurprise(
     paymentStatus?: PaymentStatus
     stripeSessionId?: string
     pricePaid?: number
+    recipientPhone?: string
   }
-): Promise<{ slug: string } | { error: string }> {
+): Promise<{ slug: string; id: string } | { error: string }> {
   const supabase = createSupabaseAdmin()
 
   const status = options?.status ?? 'published'
   const paymentStatus = options?.paymentStatus ?? (status === 'published' ? 'free' : 'pending')
 
-  const { error } = await supabase.from('surprises').insert({
-    slug,
-    template,
-    tier,
-    payload,
-    status,
-    payment_status: paymentStatus,
-    price_paid: options?.pricePaid ?? null,
-    stripe_session_id: options?.stripeSessionId ?? null,
-  })
+  const { data, error } = await supabase
+    .from('surprises')
+    .insert({
+      slug,
+      template,
+      tier,
+      payload,
+      status,
+      payment_status: paymentStatus,
+      price_paid: options?.pricePaid ?? null,
+      stripe_session_id: options?.stripeSessionId ?? null,
+      recipient_phone: options?.recipientPhone ?? null,
+    })
+    .select('id')
+    .single()
 
   if (error) {
     if (error.code === '23505') {
@@ -105,7 +111,7 @@ export async function insertSurprise(
     return { error: error.message }
   }
 
-  return { slug }
+  return { slug, id: data.id }
 }
 
 export async function updateSurpriseCheckout(

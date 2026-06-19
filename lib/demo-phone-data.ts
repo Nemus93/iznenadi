@@ -35,4 +35,5 @@ export const demoPhoneData: UnlockPhonePayload = {
   themeMode: 'preset',
   theme: 'midnight',
   tier: 'premium',
+  smsEnabled: false,
 }

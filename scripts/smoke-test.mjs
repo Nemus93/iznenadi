@@ -11,10 +11,13 @@ const routes = [
   '/demo',
   '/demo/quiz',
   '/demo/phone',
+  '/demo/countdown',
+  '/create/custom',
   '/create?template=love_message&tier=basic',
   '/create?template=love_message&tier=standard',
   '/create?template=secret_quiz&tier=premium',
   '/create?template=unlock_phone&tier=premium',
+  '/create?template=countdown&tier=standard',
 ]
 
 async function check(path, expectStatus = 200) {

@@ -4,7 +4,8 @@ Potvrdi ručno pre uključivanja plaćanja (`STRIPE_PAYMENTS_ENABLED=true`) i GT
 
 ## Kriterijumi (sve mora biti DA)
 
-- [ ] Smoke test ([SMOKE_TEST.md](SMOKE_TEST.md)) — sve prošlo
+- [x] Smoke test automatski (`npm run smoke https://web-beta-umber-59.vercel.app`) — 10/10 ruta
+- [ ] Smoke test ručno na telefonu (upload, QR, WhatsApp) — vidi ispod
 - [ ] QA matrica ([QA_CHECKLIST.md](QA_CHECKLIST.md)) — bez kritičnih bugova
 - [ ] 3 template-i rade na **produkciji** sa realnim uploadom slika
 - [ ] Share link otvara iskustvo na **telefonu** primaoca
@@ -15,7 +16,7 @@ Potvrdi ručno pre uključivanja plaćanja (`STRIPE_PAYMENTS_ENABLED=true`) i GT
 | Polje | Vrednost |
 |-------|----------|
 | Datum | |
-| Vercel URL | |
+| Vercel URL | https://web-beta-umber-59.vercel.app |
 | Testirao | Nemanja |
 | Spremno za napolje (beta) | DA / NE |
 | Napomene | |
